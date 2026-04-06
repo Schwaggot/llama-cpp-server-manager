@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROFILES_DIR="/var/lib/llama-cpp/profiles"
+ACTIVE_LINK="$PROFILES_DIR/active.conf"
+
+get_active() {
+    if [[ -L "$ACTIVE_LINK" ]]; then
+        readlink -f "$ACTIVE_LINK"
+    fi
+}
+
+list_profiles() {
+    echo "Available profiles:"
+    for f in "$PROFILES_DIR"/*.conf; do
+        [[ "$(basename "$f")" == "active.conf" ]] && continue
+        name="$(basename "$f" .conf)"
+        if [[ "$(get_active)" == "$(readlink -f "$f")" ]]; then
+            echo "  * $name  (active)"
+        else
+            echo "    $name"
+        fi
+    done
+}
+
+switch_to() {
+    local profile_name="$1"
+    local profile_file="$PROFILES_DIR/$profile_name.conf"
+
+    if [[ ! -f "$profile_file" ]]; then
+        echo "ERROR: Profile '$profile_name' not found at $profile_file" >&2
+        list_profiles
+        exit 1
+    fi
+
+    ln -sfn "$profile_file" "$ACTIVE_LINK"
+    echo "Switched to: $profile_name"
+}
+
+restart_service() {
+    echo "Restarting llama-cpp service..."
+    systemctl restart llama-cpp
+    echo "Done. Check status: systemctl status llama-cpp"
+}
+
+interactive_select() {
+    local profiles=()
+    local active
+    active="$(get_active)"
+
+    for f in "$PROFILES_DIR"/*.conf; do
+        [[ "$(basename "$f")" == "active.conf" ]] && continue
+        profiles+=("$(basename "$f" .conf)")
+    done
+
+    if [[ ${#profiles[@]} -eq 0 ]]; then
+        echo "No profiles found in $PROFILES_DIR" >&2
+        exit 1
+    fi
+
+    # Build whiptail radiolist entries
+    local items=()
+    for name in "${profiles[@]}"; do
+        local file="$PROFILES_DIR/$name.conf"
+        local desc
+        desc="$(grep -m1 '^#' "$file" | sed 's/^# *//' || echo "$name")"
+        if [[ "$(readlink -f "$file")" == "$active" ]]; then
+            items+=("$name" "$desc" "ON")
+        else
+            items+=("$name" "$desc" "OFF")
+        fi
+    done
+
+    local choice
+    choice=$(whiptail --title "llama-switch" \
+        --radiolist "Select a model profile to activate:\n\nUse arrow keys to move, space to select, enter to confirm." \
+        20 70 ${#profiles[@]} \
+        "${items[@]}" \
+        3>&1 1>&2 2>&3) || { echo "Cancelled."; exit 0; }
+
+    if [[ -z "$choice" ]]; then
+        echo "No selection made."
+        exit 0
+    fi
+
+    switch_to "$choice"
+
+    if whiptail --title "Restart service?" \
+        --yesno "Restart llama-cpp service now?" \
+        8 40 3>&1 1>&2 2>&3; then
+        restart_service
+    fi
+}
+
+# --- main ---
+
+if [[ $# -eq 0 ]]; then
+    interactive_select
+    exit 0
+fi
+
+case "${1:-}" in
+    --list|-l)
+        list_profiles
+        ;;
+    --help|-h)
+        echo "Usage: llama-switch [profile-name] [--restart]"
+        echo "       llama-switch              Interactive profile selector"
+        echo "       llama-switch --list       List available profiles"
+        echo "       llama-switch <name>       Switch to profile"
+        echo "       llama-switch <name> --restart  Switch and restart service"
+        ;;
+    *)
+        switch_to "$1"
+        if [[ "${2:-}" == "--restart" ]]; then
+            restart_service
+        fi
+        ;;
+esac
