@@ -10,16 +10,58 @@ get_active() {
     fi
 }
 
+# Extract a variable from a profile without executing arbitrary code.
+# Usage: profile_var <file> <VAR_NAME>
+profile_var() {
+    local file="$1" var="$2"
+    # Last assignment wins; strip surrounding quotes.
+    awk -v v="$var" '
+        $0 ~ "^[[:space:]]*"v"=" {
+            sub("^[[:space:]]*"v"=", "")
+            gsub(/^["'\''"]|["'\''"][[:space:]]*$/, "")
+            val = $0
+        }
+        END { print val }
+    ' "$file"
+}
+
+# Echo a list of missing files for a profile (one per line). Empty = all present.
+profile_missing_files() {
+    local file="$1"
+    local model mmproj
+    model="$(profile_var "$file" MODEL_PATH)"
+    mmproj="$(profile_var "$file" MMPROJ_PATH)"
+    if [[ -z "$model" || ! -f "$model" ]]; then
+        echo "${model:-<MODEL_PATH unset>}"
+    fi
+    if [[ -n "$mmproj" && ! -f "$mmproj" ]]; then
+        echo "$mmproj"
+    fi
+}
+
+profile_is_available() {
+    [[ -z "$(profile_missing_files "$1")" ]]
+}
+
 list_profiles() {
-    echo "Available profiles:"
+    local active
+    active="$(get_active)"
+    echo "Available profiles ([x] = model files present, [ ] = missing):"
     for f in "$PROFILES_DIR"/*.conf; do
         [[ "$(basename "$f")" == "active.conf" ]] && continue
+        local name marker active_marker
         name="$(basename "$f" .conf)"
-        if [[ "$(get_active)" == "$(readlink -f "$f")" ]]; then
-            echo "  * $name  (active)"
+        if profile_is_available "$f"; then
+            marker="[x]"
         else
-            echo "    $name"
+            marker="[ ]"
         fi
+        if [[ "$(readlink -f "$f")" == "$active" ]]; then
+            active_marker=" (active)"
+        else
+            active_marker=""
+        fi
+        echo "  $marker $name$active_marker"
     done
 }
 
@@ -29,7 +71,18 @@ switch_to() {
 
     if [[ ! -f "$profile_file" ]]; then
         echo "ERROR: Profile '$profile_name' not found at $profile_file" >&2
-        list_profiles
+        list_profiles >&2
+        exit 1
+    fi
+
+    local missing
+    missing="$(profile_missing_files "$profile_file")"
+    if [[ -n "$missing" ]]; then
+        echo "ERROR: Profile '$profile_name' references files that do not exist:" >&2
+        while IFS= read -r path; do
+            echo "  - $path" >&2
+        done <<<"$missing"
+        echo "Refusing to switch. Download the missing GGUF(s) and try again." >&2
         exit 1
     fi
 
@@ -50,11 +103,13 @@ interactive_select() {
 
     for f in "$PROFILES_DIR"/*.conf; do
         [[ "$(basename "$f")" == "active.conf" ]] && continue
+        profile_is_available "$f" || continue
         profiles+=("$(basename "$f" .conf)")
     done
 
     if [[ ${#profiles[@]} -eq 0 ]]; then
-        echo "No profiles found in $PROFILES_DIR" >&2
+        echo "No profiles with all required model files present in $PROFILES_DIR." >&2
+        echo "Run 'llama-switch --list' to see every profile and what's missing." >&2
         exit 1
     fi
 
@@ -73,7 +128,7 @@ interactive_select() {
 
     local choice
     choice=$(whiptail --title "llama-switch" \
-        --radiolist "Select a model profile to activate:\n\nUse arrow keys to move, space to select, enter to confirm." \
+        --radiolist "Select a model profile to activate:\n\nOnly profiles with all required model files present are shown.\nUse arrow keys to move, space to select, enter to confirm." \
         20 70 ${#profiles[@]} \
         "${items[@]}" \
         3>&1 1>&2 2>&3) || { echo "Cancelled."; exit 0; }
@@ -105,10 +160,13 @@ case "${1:-}" in
         ;;
     --help|-h)
         echo "Usage: llama-switch [profile-name] [--restart]"
-        echo "       llama-switch              Interactive profile selector"
-        echo "       llama-switch --list       List available profiles"
-        echo "       llama-switch <name>       Switch to profile"
-        echo "       llama-switch <name> --restart  Switch and restart service"
+        echo "       llama-switch                   Interactive picker (only profiles whose"
+        echo "                                      model files are present on disk)"
+        echo "       llama-switch --list            List every profile, marking which are"
+        echo "                                      backed by files on disk ([x]) and which"
+        echo "                                      are missing GGUFs ([ ])"
+        echo "       llama-switch <name>            Switch to profile (fails if files missing)"
+        echo "       llama-switch <name> --restart  Switch and restart the service"
         ;;
     *)
         switch_to "$1"
