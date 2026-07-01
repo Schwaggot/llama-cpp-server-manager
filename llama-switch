@@ -28,14 +28,18 @@ profile_var() {
 # Echo a list of missing files for a profile (one per line). Empty = all present.
 profile_missing_files() {
     local file="$1"
-    local model mmproj
+    local model mmproj draft
     model="$(profile_var "$file" MODEL_PATH)"
     mmproj="$(profile_var "$file" MMPROJ_PATH)"
+    draft="$(profile_var "$file" MODEL_DRAFT_PATH)"
     if [[ -z "$model" || ! -f "$model" ]]; then
         echo "${model:-<MODEL_PATH unset>}"
     fi
     if [[ -n "$mmproj" && ! -f "$mmproj" ]]; then
         echo "$mmproj"
+    fi
+    if [[ -n "$draft" && ! -f "$draft" ]]; then
+        echo "$draft"
     fi
 }
 

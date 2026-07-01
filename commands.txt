@@ -19,6 +19,20 @@ sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/diffus
 #     -m /var/lib/llama-cpp/models/diffusiongemma-26B-A4B-it-Q4_K_M.gguf \
 #     -ngl 99 -cnv -n 2048            # add --diffusion-visual to watch denoising
 
+# --- MTP (Multi-Token Prediction) variants ---
+# Needs a recent llama-server build supporting: --spec-type draft-mtp
+# (check: llama-server --help | grep -- --spec-type)
+
+# Gemma 4 26B MTP head (~462 MB). Reuses the existing gemma-4-26b main GGUF +
+# mmproj; only this separate MTP draft head is new.
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/gemma-4-26B-A4B-it-GGUF/resolve/main/mtp-gemma-4-26B-A4B-it.gguf"
+
+# Qwen 3.6 MTP models come from dedicated *-MTP-GGUF repos with the MTP heads
+# embedded. Their upstream filename collides with the non-MTP GGUFs, so save
+# them with an -MTP- suffix via -O.
+sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-35B-A3B-MTP-UD-Q4_K_XL.gguf "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf"
+sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF/resolve/main/Qwen3.6-27B-UD-Q4_K_XL.gguf"
+
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
 

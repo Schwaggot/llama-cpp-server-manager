@@ -20,5 +20,13 @@ ProtectSystem=full
 ProtectHome=false
 PrivateTmp=true
 
+# Paths the service must access. /var/lib/llama-cpp holds the app + profiles.
+# If models live on a separate disk and /var/lib/llama-cpp/models is a symlink
+# to it (e.g. /data/var/lib/llama-cpp/models), list that target too so it stays
+# accessible under stricter ProtectSystem settings. Drop the /data line if you
+# keep everything on the root disk.
+ReadWritePaths=/var/lib/llama-cpp
+ReadWritePaths=-/data/var/lib/llama-cpp
+
 [Install]
 WantedBy=multi-user.target

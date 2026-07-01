@@ -42,6 +42,7 @@ MIN_P=""
 TOP_K=""
 REPEAT_PENALTY=""
 MMPROJ_PATH=""
+MODEL_DRAFT_PATH=""
 EXTRA_FLAGS=""
 MODEL_NAME=""
 
@@ -63,6 +64,7 @@ CMD=( /usr/local/bin/llama-server
 )
 
 [[ -n "$MMPROJ_PATH" && -f "$MMPROJ_PATH" ]] && CMD+=( --mmproj "$MMPROJ_PATH" )
+[[ -n "$MODEL_DRAFT_PATH" && -f "$MODEL_DRAFT_PATH" ]] && CMD+=( --model-draft "$MODEL_DRAFT_PATH" )
 [[ -n "$CACHE_TYPE_K" ]]  && CMD+=( --cache-type-k "$CACHE_TYPE_K" )
 [[ -n "$CACHE_TYPE_V" ]]  && CMD+=( --cache-type-v "$CACHE_TYPE_V" )
 [[ -n "$TEMP" ]]           && CMD+=( --temp "$TEMP" )
