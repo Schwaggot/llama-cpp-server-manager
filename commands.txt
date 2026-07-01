@@ -11,8 +11,13 @@ sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.
 # Nemotron 3 Nano 30B-A3B (UD-Q4_K_XL, ~22.8 GB) - shared by both nemotron profiles
 sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF/resolve/main/Nemotron-3-Nano-30B-A3B-UD-Q4_K_XL.gguf"
 
-# DiffusionGemma 26B-A4B-it (Q4_K_M, ~16.8 GB) - diffusion LLM, needs llama-diffusion-cli (not llama-server)
+# DiffusionGemma 26B-A4B-it (Q4_K_M, ~16.8 GB) - diffusion LLM.
+# NOT servable via llama-server (unknown architecture 'diffusion-gemma'); no REST API.
+# Run manually only, using llama-diffusion-cli from the PR-24423 build:
 sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/diffusiongemma-26B-A4B-it-GGUF/resolve/main/diffusiongemma-26B-A4B-it-Q4_K_M.gguf"
+#   /home/llama-cpp/llama.cpp-diffusion/build/bin/llama-diffusion-cli \
+#     -m /var/lib/llama-cpp/models/diffusiongemma-26B-A4B-it-Q4_K_M.gguf \
+#     -ngl 99 -cnv -n 2048            # add --diffusion-visual to watch denoising
 
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
