@@ -17,7 +17,7 @@ llama-switch qwen36-27b-think-code --restart
 journalctl -u llama-cpp -f
 ```
 
-The server listens on `http://0.0.0.0:8080` (OpenAI-compatible `/v1/...` endpoints + llama.cpp's native API).
+The server listens on `http://0.0.0.0:8090` (OpenAI-compatible `/v1/...` endpoints + llama.cpp's native API).
 
 ## Installation (new machine)
 
@@ -190,7 +190,7 @@ Profiles are bash files sourced by `serve.sh`. All variables have sensible defau
 | `MODEL_PATH`     | Path to GGUF file (required)         | -           |
 | `MMPROJ_PATH`    | Path to multimodal projector GGUF    | (none)      |
 | `HOST`           | Listen address                       | `0.0.0.0`   |
-| `PORT`           | Listen port                          | `8080`      |
+| `PORT`           | Listen port                          | `8090`      |
 | `GPU_LAYERS`     | Number of layers on GPU              | `auto`      |
 | `CTX_SIZE`       | Context window size                  | `32768`     |
 | `BATCH_SIZE`     | Batch size                           | `8192`      |

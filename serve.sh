@@ -26,7 +26,7 @@ echo "Loading profile: $PROFILE"
 
 # --- defaults (can be overridden by profile) ---
 HOST="0.0.0.0"
-PORT="8080"
+PORT="8090"
 GPU_LAYERS="auto"
 CTX_SIZE="32768"
 BATCH_SIZE="8192"
