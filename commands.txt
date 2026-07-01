@@ -1,0 +1,22 @@
+# --- Download Ministral 3 14B Instruct + Reasoning (UD-Q6_K_XL), text-only ---
+# Run as root on the remote. -E preserves http_proxy/https_proxy.
+
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Ministral-3-14B-Instruct-2512-GGUF/resolve/main/Ministral-3-14B-Instruct-2512-UD-Q6_K_XL.gguf"
+
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Ministral-3-14B-Reasoning-2512-GGUF/resolve/main/Ministral-3-14B-Reasoning-2512-UD-Q6_K_XL.gguf"
+
+# Qwen 3.6 35B-A3B (UD-Q4_K_XL, ~22 GB) - shared by both qwen36 profiles
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf"
+
+# Nemotron 3 Nano 30B-A3B (UD-Q4_K_XL, ~22.8 GB) - shared by both nemotron profiles
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF/resolve/main/Nemotron-3-Nano-30B-A3B-UD-Q4_K_XL.gguf"
+
+# DiffusionGemma 26B-A4B-it (Q4_K_M, ~16.8 GB) - diffusion LLM, needs llama-diffusion-cli (not llama-server)
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/diffusiongemma-26B-A4B-it-GGUF/resolve/main/diffusiongemma-26B-A4B-it-Q4_K_M.gguf"
+
+# Fix ownership of everything under models/ (works for any newly downloaded file)
+sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
+
+# --- Activate and restart ---
+sudo llama-switch ministral-3-14b --restart
+sudo journalctl -u llama-cpp -f
