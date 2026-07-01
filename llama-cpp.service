@@ -1,0 +1,24 @@
+[Unit]
+Description=llama.cpp server (profile-based)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=llama-cpp
+Group=llama-cpp
+ExecStart=/var/lib/llama-cpp/serve.sh
+Restart=on-failure
+RestartSec=5
+
+# Uncomment if you have an NVIDIA GPU and need device access:
+# SupplementaryGroups=video render
+
+# Hardening (relax if it breaks GPU/driver access)
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
