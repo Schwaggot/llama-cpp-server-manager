@@ -3,10 +3,26 @@ Description=llama.cpp server (profile-based)
 After=network-online.target
 Wants=network-online.target
 
+# NVIDIA GPU only: keep the driver initialized so the device nodes persist
+# across the boot window. Weak dependency, so it is a no-op on non-GPU hosts
+# or when nvidia-persistenced is not installed/enabled.
+After=nvidia-persistenced.service
+Wants=nvidia-persistenced.service
+
 [Service]
 Type=simple
 User=llama-cpp
 Group=llama-cpp
+
+# NVIDIA GPU only: force the CUDA/UVM device nodes into existence before the
+# server starts. The base nvidia nodes come up early at boot, but /dev/nvidia-uvm
+# is created lazily and the server can lose the race and fail CUDA init.
+# Runs synchronously, so the node is guaranteed present before ExecStart.
+# The leading '+' runs this as root regardless of User= and NoNewPrivileges=;
+# without it the setuid-root nvidia-modprobe is neutralized and cannot create
+# the node. Adjust the path if 'which nvidia-modprobe' differs.
+ExecStartPre=+/usr/bin/nvidia-modprobe -c 0 -u
+
 ExecStart=/var/lib/llama-cpp/serve.sh
 Restart=on-failure
 RestartSec=5

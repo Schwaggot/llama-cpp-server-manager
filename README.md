@@ -70,10 +70,22 @@ cat >/etc/systemd/system/llama-cpp.service <<'EOF'
 Description=llama.cpp Server (profile-based)
 After=network.target
 
+# NVIDIA GPU only: keep the driver initialized so the CUDA device nodes persist
+# across the boot window. Weak dependency, so it is a no-op without a GPU.
+After=nvidia-persistenced.service
+Wants=nvidia-persistenced.service
+
 [Service]
 Type=simple
 User=llama-cpp
 Group=llama-cpp
+
+# NVIDIA GPU only: /dev/nvidia-uvm is created lazily at boot, so the server can
+# lose the race and fail CUDA init. Force the node into existence first. The
+# leading '+' runs this as root, which the setuid nvidia-modprobe needs since
+# NoNewPrivileges= neutralizes its setuid bit. Adjust the path if needed.
+ExecStartPre=+/usr/bin/nvidia-modprobe -c 0 -u
+
 ExecStart=/var/lib/llama-cpp/serve.sh
 Restart=on-failure
 RestartSec=5
@@ -91,6 +103,9 @@ EOF
 
 systemctl daemon-reload
 systemctl enable llama-cpp
+
+# NVIDIA GPU only: enable persistence so the driver stays initialized at boot.
+systemctl enable --now nvidia-persistenced
 ```
 
 ### 5. Download at least one model
