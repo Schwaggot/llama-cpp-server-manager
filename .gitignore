@@ -3,3 +3,5 @@ profiles/active.conf
 .bash*
 .profile
 .cache/
+.idea/
+.DS_Store

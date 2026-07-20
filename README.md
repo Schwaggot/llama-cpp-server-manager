@@ -221,6 +221,28 @@ Profiles are bash files sourced by `serve.sh`. All variables have sensible defau
 | `MIN_P`          | Min-p sampling                       | (none)      |
 | `REPEAT_PENALTY` | Repetition penalty                   | (none)      |
 | `EXTRA_FLAGS`    | Additional flags (added verbatim)    | (none)      |
+| `REQUIRE_GPU`    | Refuse to start without CUDA (`auto`/`yes`/`no`) | `auto` |
+| `GPU_WAIT_SECS`  | Seconds to wait for a CUDA device    | `60`        |
+
+## GPU startup safety
+
+`llama-server` treats a failed CUDA init as non-fatal: it prints a warning,
+ignores `--gpu-layers`, and serves from CPU at a fraction of the expected
+speed. The systemd unit stays `active (running)`, so this is easy to miss.
+
+Two mechanisms guard against it:
+
+- The unit runs `ExecStartPre=+/usr/bin/nvidia-modprobe -c 0 -u`, which forces
+  the `/dev/nvidia-uvm` nodes into existence before the server starts. These are
+  created lazily and a service starting early in the boot window can otherwise
+  lose the race, making CUDA init fail with `unknown error`.
+- `serve.sh` waits up to `GPU_WAIT_SECS` for `llama-server --list-devices` to
+  report a CUDA device and exits non-zero if it never appears, so
+  `Restart=on-failure` retries instead of quietly falling back to CPU.
+
+With `REQUIRE_GPU=auto` the check applies only on hosts that have an NVIDIA
+device node, so CPU-only machines are unaffected. Set `REQUIRE_GPU=no` to
+deliberately serve from CPU on a GPU host.
 
 ## Environment override
 
