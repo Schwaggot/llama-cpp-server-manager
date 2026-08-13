@@ -11,6 +11,11 @@ sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.
 # Nemotron 3 Nano 30B-A3B (UD-Q4_K_XL, ~22.8 GB) - shared by both nemotron profiles
 sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Nemotron-3-Nano-30B-A3B-GGUF/resolve/main/Nemotron-3-Nano-30B-A3B-UD-Q4_K_XL.gguf"
 
+# Nemotron 3.5 Lightning 30B-A3B (UD-Q4_K_XL, ~23.8 GB) - shared by all three
+# nemotron35 profiles. The MTP head is embedded in this same GGUF, so the -mtp
+# profile needs no extra download.
+sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF/resolve/main/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-UD-Q4_K_XL.gguf"
+
 # DiffusionGemma 26B-A4B-it (Q4_K_M, ~16.8 GB) - diffusion LLM.
 # NOT servable via llama-server (unknown architecture 'diffusion-gemma'); no REST API.
 # Run manually only, using llama-diffusion-cli from the PR-24423 build:
@@ -32,6 +37,9 @@ sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/gemma-
 # them with an -MTP- suffix via -O.
 sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-35B-A3B-MTP-UD-Q4_K_XL.gguf "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-MTP-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_XL.gguf"
 sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https://huggingface.co/unsloth/Qwen3.6-27B-MTP-GGUF/resolve/main/Qwen3.6-27B-UD-Q4_K_XL.gguf"
+
+# Nemotron 3.5 Lightning needs no MTP download - the head ships inside the main
+# GGUF above (tensors blk.52.nextn.*).
 
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
