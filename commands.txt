@@ -51,6 +51,9 @@ sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https
 # Nemotron 3.5 Lightning needs no MTP download - the head ships inside the main
 # GGUF above (tensors blk.52.nextn.*).
 
+# Qwen 3.8 27B likewise needs no MTP download - the head ships inside the main
+# GGUF above (block 64, tensors blk.64.nextn.*).
+
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
 
