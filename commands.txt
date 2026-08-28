@@ -17,13 +17,13 @@ sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Nemotr
 sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-GGUF/resolve/main/NVIDIA-Nemotron-3.5-Lightning-30B-A3B-UD-Q4_K_XL.gguf"
 
 # Qwen 3.8 27B (UD-Q4_K_XL, ~17-19 GB) - dense, vision-capable.
-# Shared by both qwen38 profiles: qwen38-27b and qwen38-27b-think differ only
-# in reasoning_effort and sampling, so this one file serves both.
+# Shared by every qwen38 profile: they differ only in reasoning_effort,
+# sampling, vision and MTP flags, so this one file serves all of them.
 sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/main/Qwen3.8-27B-UD-Q4_K_XL.gguf"
 
-# Its vision projector, used by qwen38-27b only (qwen38-27b-think runs
-# text-only). The upstream name is generic, so save it with the model prefix
-# the profile expects.
+# Its vision projector, used by qwen38-27b and qwen38-27b-vision-think-mtp.
+# The upstream name is generic, so save it with the model prefix the profiles
+# expect.
 sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.8-27B-mmproj-BF16.gguf "https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/main/mmproj-BF16.gguf"
 
 # DiffusionGemma 26B-A4B-it (Q4_K_M, ~16.8 GB) - diffusion LLM.
