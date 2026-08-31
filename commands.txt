@@ -26,6 +26,24 @@ sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.
 # expect.
 sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.8-27B-mmproj-BF16.gguf "https://huggingface.co/unsloth/Qwen3.8-27B-GGUF/resolve/main/mmproj-BF16.gguf"
 
+# Qwen3.8-Flash-Next (UD-Q4_K_XL, ~111 GB across 4 shards) - 125B MoE, 6B
+# active, plus a 51B n-gram/PLE lookup table. Shared by all three
+# qwen38-flash-next profiles. Upstream keeps the shards in a per-quant
+# subdirectory, so the URLs carry the UD-Q4_K_XL/ prefix; the local filenames
+# do not. Download every part into models/ and point MODEL_PATH at part 1.
+# Needs a llama-server from 2026-08-27 or later (qwen4exp, PR #27742). Check
+# the library, not the binary - a shared build leaves only a shim in bin/:
+#   strings /usr/local/lib/libllama.so.0 /usr/local/bin/llama-server \
+#     2>/dev/null | grep -c qwen4exp
+for i in 00001 00002 00003 00004; do
+  sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/main/UD-Q4_K_XL/Qwen3.8-Flash-Next-UD-Q4_K_XL-${i}-of-00004.gguf"
+done
+
+# Its vision projector, used by qwen38-flash-next and
+# qwen38-flash-next-vision-think. Generic upstream name again, so save it with
+# the model prefix the profiles expect.
+sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.8-Flash-Next-mmproj-BF16.gguf "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/main/mmproj-BF16.gguf"
+
 # DiffusionGemma 26B-A4B-it (Q4_K_M, ~16.8 GB) - diffusion LLM.
 # NOT servable via llama-server (unknown architecture 'diffusion-gemma'); no REST API.
 # Run manually only, using llama-diffusion-cli from the PR-24423 build:
@@ -53,6 +71,9 @@ sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https
 
 # Qwen 3.8 27B likewise needs no MTP download - the head ships inside the main
 # GGUF above (block 64, tensors blk.64.nextn.*).
+
+# Qwen3.8-Flash-Next has no MTP variant yet: multi-token prediction for the
+# qwen4exp architecture was still work in progress when it was merged upstream.
 
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
