@@ -72,8 +72,27 @@ sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https
 # Qwen 3.8 27B likewise needs no MTP download - the head ships inside the main
 # GGUF above (block 64, tensors blk.64.nextn.*).
 
-# Qwen3.8-Flash-Next has no MTP variant yet: multi-token prediction for the
-# qwen4exp architecture was still work in progress when it was merged upstream.
+# Qwen3.8-Flash-Next MTP needs a fork, not just a download. Unsloth ship draft
+# heads in MTP/, but upstream master has no working qwen4exp draft path
+# (PR #28610 closed unmerged, #28243 open, issue #29174 on 2026-09-20). To try
+# it, build danielhanchen's qwen4exp/mtp branch, fetch the shared head and pass
+# -md <head> --spec-type draft-mtp --spec-draft-n-max 5:
+# sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/main/MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf"
+
+# GLM-5.3-Flash (UD-Q2_K_XL, ~109 GB across 4 shards) - 320B MoE, 18B active.
+# 2-bit is the largest quant that leaves room for a KV cache on a 128 GB box;
+# UD-IQ3_XXS is 120 GB and Unsloth ask 128-150 GB for it. Per-quant
+# subdirectory upstream, flat filenames locally, same as Flash-Next.
+# Needs a llama-server from Unsloth's glm5next/upstream branch - the
+# architecture is not in upstream master. Check:
+#   strings /usr/local/lib/libllama.so.0 /usr/local/bin/llama-server \
+#     2>/dev/null | grep -c glm5next
+for i in 00001 00002 00003 00004; do
+  sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/GLM-5.3-Flash-GGUF/resolve/main/UD-Q2_K_XL/GLM-5.3-Flash-UD-Q2_K_XL-${i}-of-00004.gguf"
+done
+
+# Its vision projector, if you add a vision sibling to glm-5.3-flash.
+# sudo -E wget -O /var/lib/llama-cpp/models/GLM-5.3-Flash-mmproj-BF16.gguf "https://huggingface.co/unsloth/GLM-5.3-Flash-GGUF/resolve/main/mmproj-BF16.gguf"
 
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
