@@ -46,10 +46,10 @@ MODEL_DRAFT_PATH=""
 EXTRA_FLAGS=""
 MODEL_NAME=""
 
-# GPU presence check before starting. llama-server treats a failed CUDA init as
+# GPU presence check before starting. llama-server treats a failed GPU init as
 # non-fatal and silently falls back to CPU, which serves at a fraction of the
 # expected speed while the unit still looks healthy. "auto" enforces the check
-# only on hosts that actually have an NVIDIA device node.
+# only on hosts that have an NVIDIA device node or a DRM render node.
 REQUIRE_GPU="auto"
 GPU_WAIT_SECS="60"
 
@@ -57,20 +57,30 @@ GPU_WAIT_SECS="60"
 source "$PROFILE"
 
 # --- GPU readiness gate ---
-# At boot the NVIDIA stack can come up after this service. /dev/nvidia-uvm in
-# particular is created lazily, and losing that race makes CUDA init fail with
-# "unknown error". Wait for a usable CUDA device, then hard-fail so systemd
-# restarts us instead of quietly serving from CPU.
+# Both stacks can come up after this service: /dev/nvidia-uvm is created
+# lazily, and the amdgpu DRM node appears late enough that llama-server can
+# enumerate devices before it exists. Either way the fallback is a warning and
+# CPU inference, so wait for a usable device, then hard-fail and let systemd
+# retry. Profiles on a GPU host should set REQUIRE_GPU=yes rather than rely on
+# the detection below, which can itself lose the race.
+GPU_BACKEND=""
 if [[ "$REQUIRE_GPU" == "auto" ]]; then
     if [[ -e /dev/nvidia0 ]] || command -v nvidia-smi >/dev/null 2>&1; then
         REQUIRE_GPU="yes"
+        GPU_BACKEND="CUDA"
+    elif compgen -G "/dev/dri/renderD*" >/dev/null 2>&1; then
+        REQUIRE_GPU="yes"
+        GPU_BACKEND="Vulkan"
     else
         REQUIRE_GPU="no"
     fi
 fi
 
+# Set explicitly by a profile, or detected too early to tell: accept either.
+[[ -z "$GPU_BACKEND" ]] && GPU_BACKEND="CUDA|Vulkan"
+
 if [[ "$REQUIRE_GPU" == "yes" && "$GPU_LAYERS" != "0" ]]; then
-    echo "GPU required: waiting up to ${GPU_WAIT_SECS}s for a usable CUDA device..."
+    echo "GPU required: waiting up to ${GPU_WAIT_SECS}s for a usable ${GPU_BACKEND} device..."
     deadline=$(( SECONDS + GPU_WAIT_SECS ))
     gpu_ok=0
     while (( SECONDS < deadline )); do
@@ -78,7 +88,7 @@ if [[ "$REQUIRE_GPU" == "yes" && "$GPU_LAYERS" != "0" ]]; then
         # Best-effort: the systemd unit already does this via ExecStartPre.
         command -v nvidia-modprobe >/dev/null 2>&1 && nvidia-modprobe -c 0 -u >/dev/null 2>&1 || true
 
-        if /usr/local/bin/llama-server --list-devices 2>/dev/null | grep -q '^ *CUDA'; then
+        if /usr/local/bin/llama-server --list-devices 2>/dev/null | grep -qE "^ *(${GPU_BACKEND})"; then
             gpu_ok=1
             break
         fi
@@ -86,14 +96,14 @@ if [[ "$REQUIRE_GPU" == "yes" && "$GPU_LAYERS" != "0" ]]; then
     done
 
     if (( gpu_ok == 0 )); then
-        echo "ERROR: no usable CUDA device after ${GPU_WAIT_SECS}s." >&2
+        echo "ERROR: no usable GPU device (${GPU_BACKEND}) after ${GPU_WAIT_SECS}s." >&2
         echo "Refusing to start on CPU. Diagnostics:" >&2
         /usr/local/bin/llama-server --list-devices >&2 2>&1 || true
         nvidia-smi >&2 2>&1 || true
         exit 1
     fi
-    echo "CUDA device present:"
-    /usr/local/bin/llama-server --list-devices 2>/dev/null | grep '^ *CUDA' || true
+    echo "GPU device present:"
+    /usr/local/bin/llama-server --list-devices 2>/dev/null | grep -E "^ *(${GPU_BACKEND})" || true
 fi
 
 # --- build command ---
