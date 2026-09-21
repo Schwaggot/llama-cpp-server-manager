@@ -79,16 +79,17 @@ sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https
 # -md <head> --spec-type draft-mtp --spec-draft-n-max 5:
 # sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/Qwen3.8-Flash-Next-GGUF/resolve/main/MTP/mtp-Qwen3.8-Flash-Next-shared-Q8_0.gguf"
 
-# GLM-5.3-Flash (UD-Q2_K_XL, ~109 GB across 4 shards) - 320B MoE, 18B active.
-# 2-bit is the largest quant that leaves room for a KV cache on a 128 GB box;
-# UD-IQ3_XXS is 120 GB and Unsloth ask 128-150 GB for it. Per-quant
-# subdirectory upstream, flat filenames locally, same as Flash-Next.
+# GLM-5.3-Flash (UD-IQ3_XXS, ~120 GB across 4 shards) - 320B MoE, 18B active.
+# halo has 125.1 GiB = 134 GB, which is inside the 128-150 GB Unsloth ask for
+# 3-bit, so it fits with ~13 GiB to spare. UD-Q2_K_XL (108.7 GB, 78% top-1) is
+# the step down. Per-quant subdirectory upstream, flat filenames locally, same
+# as Flash-Next. Shard 1 is only 9 MB of header; the weight is in 2 and 3.
 # Needs a llama-server from Unsloth's glm5next/upstream branch - the
 # architecture is not in upstream master. Check:
 #   strings /usr/local/lib/libllama.so.0 /usr/local/bin/llama-server \
 #     2>/dev/null | grep -c glm5next
 for i in 00001 00002 00003 00004; do
-  sudo -E wget -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/GLM-5.3-Flash-GGUF/resolve/main/UD-Q2_K_XL/GLM-5.3-Flash-UD-Q2_K_XL-${i}-of-00004.gguf"
+  sudo -E wget -c -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/GLM-5.3-Flash-GGUF/resolve/main/UD-IQ3_XXS/GLM-5.3-Flash-UD-IQ3_XXS-${i}-of-00004.gguf"
 done
 
 # Its vision projector, if you add a vision sibling to glm-5.3-flash.
