@@ -95,6 +95,12 @@ done
 # Its vision projector, if you add a vision sibling to glm-5.3-flash.
 # sudo -E wget -O /var/lib/llama-cpp/models/GLM-5.3-Flash-mmproj-BF16.gguf "https://huggingface.co/unsloth/GLM-5.3-Flash-GGUF/resolve/main/mmproj-BF16.gguf"
 
+# Recursive Flint (Q8_0, ~42.3 GB) - 40B MoE, 2.5B active, text only. Used by
+# the flint profile. Needs a llama-server from 2026-10-21 or later (flint,
+# PR #30928). Master renamed glm5next to glm5-next at the same time, so a
+# master build also needs the re-uploaded GLM-5.3-Flash GGUF above.
+sudo -E wget -c -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/flint-GGUF/resolve/main/flint-Q8_0.gguf"
+
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
 
