@@ -101,6 +101,13 @@ done
 # master build also needs the re-uploaded GLM-5.3-Flash GGUF above.
 sudo -E wget -c -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/flint-GGUF/resolve/main/flint-Q8_0.gguf"
 
+# Ternary Bonsai 2 27B (Q2_0, ~7.6 GB) + vision projector (Q8_0, ~0.6 GB).
+# Used by the bonsai-2-27b profile, which runs as a second instance
+# (llama-cpp@bonsai-2-27b). Q2_0 needs llama.cpp b11556 or newer; older builds
+# load it silently and emit garbage. The profile pins /opt/llama.cpp/b11998.
+sudo -E wget -c -P /var/lib/llama-cpp/models "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/main/Ternary-Bonsai-2-27B-Q2_0.gguf"
+sudo -E wget -c -P /var/lib/llama-cpp/models "https://huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf/resolve/main/Ternary-Bonsai-2-27B-mmproj-Q8_0.gguf"
+
 # Fix ownership of everything under models/ (works for any newly downloaded file)
 sudo chown -R llama-cpp:llama-cpp /var/lib/llama-cpp/models
 

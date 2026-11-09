@@ -1,0 +1,50 @@
+[Unit]
+Description=llama.cpp server, extra instance for profile %i
+# Runs profiles/%i.conf beside the main llama-cpp.service; give it its own PORT.
+After=network-online.target
+Wants=network-online.target
+
+# NVIDIA GPU only: keep the driver initialized so the device nodes persist
+# across the boot window. Weak dependency, so it is a no-op on non-GPU hosts
+# or when nvidia-persistenced is not installed/enabled.
+After=nvidia-persistenced.service
+Wants=nvidia-persistenced.service
+
+[Service]
+Type=simple
+User=llama-cpp
+Group=llama-cpp
+
+# NVIDIA GPU only: force the CUDA/UVM device nodes into existence before the
+# server starts. The base nvidia nodes come up early at boot, but /dev/nvidia-uvm
+# is created lazily and the server can lose the race and fail CUDA init.
+# Runs synchronously, so the node is guaranteed present before ExecStart.
+# The leading '+' runs this as root regardless of User= and NoNewPrivileges=;
+# without it the setuid-root nvidia-modprobe is neutralized and cannot create
+# the node. Adjust the path if 'which nvidia-modprobe' differs.
+ExecStartPre=+/usr/bin/nvidia-modprobe -c 0 -u
+
+Environment=LLAMA_PROFILE=%i.conf
+ExecStart=/var/lib/llama-cpp/serve.sh
+Restart=on-failure
+RestartSec=5
+
+# Uncomment if you have an NVIDIA GPU and need device access:
+# SupplementaryGroups=video render
+
+# Hardening (relax if it breaks GPU/driver access)
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=false
+PrivateTmp=true
+
+# Paths the service must access. /var/lib/llama-cpp holds the app + profiles.
+# If models live on a separate disk and /var/lib/llama-cpp/models is a symlink
+# to it (e.g. /data/var/lib/llama-cpp/models), list that target too so it stays
+# accessible under stricter ProtectSystem settings. Drop the /data line if you
+# keep everything on the root disk.
+ReadWritePaths=/var/lib/llama-cpp
+ReadWritePaths=-/data/var/lib/llama-cpp
+
+[Install]
+WantedBy=multi-user.target

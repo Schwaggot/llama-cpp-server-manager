@@ -204,6 +204,7 @@ Profiles are bash files sourced by `serve.sh`. All variables have sensible defau
 | `MODEL_NAME`     | Display name / alias                 | (none)      |
 | `MODEL_PATH`     | Path to GGUF file (required)         | -           |
 | `MMPROJ_PATH`    | Path to multimodal projector GGUF    | (none)      |
+| `LLAMA_SERVER`   | llama-server binary to run           | `/usr/local/bin/llama-server` |
 | `HOST`           | Listen address                       | `0.0.0.0`   |
 | `PORT`           | Listen port                          | `8090`      |
 | `GPU_LAYERS`     | Number of layers on GPU              | `auto`      |
@@ -244,16 +245,40 @@ With `REQUIRE_GPU=auto` the check applies only on hosts that have an NVIDIA
 device node, so CPU-only machines are unaffected. Set `REQUIRE_GPU=no` to
 deliberately serve from CPU on a GPU host.
 
-## Environment override
+## Running a second instance
 
-You can bypass the active symlink by setting `LLAMA_PROFILE`:
+`serve.sh` honors `LLAMA_PROFILE` ahead of the active symlink, so a profile can
+run beside the main service. The template unit `llama-cpp@.service` does this
+for `profiles/<name>.conf`:
 
 ```bash
-LLAMA_PROFILE=glm-4.7-flash.conf /var/lib/llama-cpp/serve.sh
+cp llama-cpp@.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now llama-cpp@bonsai-2-27b
+journalctl -u llama-cpp@bonsai-2-27b -f
 ```
 
-This is handy for spinning up a second instance on another port without touching the active profile:
+The profile must set its own `PORT`, and the GPU must hold both models.
+`llama-switch` manages only the main instance.
+
+A profile can also set `LLAMA_SERVER` to a separately built binary, for a model
+that needs a newer llama.cpp than the shared `/usr/local/bin/llama-server`.
+Build it in its own tree and install it under `/opt/llama.cpp/<tag>/`:
 
 ```bash
-sudo -u llama-cpp PORT=8081 LLAMA_PROFILE=qwen36-27b.conf /var/lib/llama-cpp/serve.sh
+git -C /home/llama-cpp/llama.cpp worktree add --detach ../llama.cpp-b11998 b11998
+cd /home/llama-cpp/llama.cpp-b11998
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF -DGGML_CUDA=ON -DGGML_NATIVE=ON
+cmake --build build --config Release -j --target llama-server
+install -d /opt/llama.cpp/b11998 && install -m755 build/bin/llama-server /opt/llama.cpp/b11998/
+```
+
+The build downloads the web UI from Hugging Face. Behind a proxy, keep the
+proxy variables (`sudo -E`) for the build step too, not just for `cmake -B`;
+otherwise the download times out and the binary serves a 404 at `/`.
+
+For a one-off run without systemd:
+
+```bash
+sudo -u llama-cpp LLAMA_PROFILE=bonsai-2-27b.conf /var/lib/llama-cpp/serve.sh
 ```

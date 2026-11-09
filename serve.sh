@@ -6,10 +6,11 @@ PROFILES_DIR="$BASE_DIR/profiles"
 ACTIVE_LINK="$BASE_DIR/profiles/active.conf"
 
 # --- resolve profile ---
-if [[ -L "$ACTIVE_LINK" ]]; then
-    PROFILE="$(readlink -f "$ACTIVE_LINK")"
-elif [[ -n "${LLAMA_PROFILE:-}" ]]; then
+# LLAMA_PROFILE wins so a second instance can run beside the active one.
+if [[ -n "${LLAMA_PROFILE:-}" ]]; then
     PROFILE="$PROFILES_DIR/$LLAMA_PROFILE"
+elif [[ -L "$ACTIVE_LINK" ]]; then
+    PROFILE="$(readlink -f "$ACTIVE_LINK")"
 else
     echo "ERROR: No active profile. Run:  llama-switch <profile-name>" >&2
     echo "Available profiles:" >&2
@@ -25,6 +26,8 @@ fi
 echo "Loading profile: $PROFILE"
 
 # --- defaults (can be overridden by profile) ---
+# A profile may pin a separately built binary that needs a newer llama.cpp.
+LLAMA_SERVER="/usr/local/bin/llama-server"
 HOST="0.0.0.0"
 PORT="8090"
 GPU_LAYERS="auto"
@@ -88,7 +91,7 @@ if [[ "$REQUIRE_GPU" == "yes" && "$GPU_LAYERS" != "0" ]]; then
         # Best-effort: the systemd unit already does this via ExecStartPre.
         command -v nvidia-modprobe >/dev/null 2>&1 && nvidia-modprobe -c 0 -u >/dev/null 2>&1 || true
 
-        if /usr/local/bin/llama-server --list-devices 2>/dev/null | grep -qE "^ *(${GPU_BACKEND})"; then
+        if "$LLAMA_SERVER" --list-devices 2>/dev/null | grep -qE "^ *(${GPU_BACKEND})"; then
             gpu_ok=1
             break
         fi
@@ -98,16 +101,16 @@ if [[ "$REQUIRE_GPU" == "yes" && "$GPU_LAYERS" != "0" ]]; then
     if (( gpu_ok == 0 )); then
         echo "ERROR: no usable GPU device (${GPU_BACKEND}) after ${GPU_WAIT_SECS}s." >&2
         echo "Refusing to start on CPU. Diagnostics:" >&2
-        /usr/local/bin/llama-server --list-devices >&2 2>&1 || true
+        "$LLAMA_SERVER" --list-devices >&2 2>&1 || true
         nvidia-smi >&2 2>&1 || true
         exit 1
     fi
     echo "GPU device present:"
-    /usr/local/bin/llama-server --list-devices 2>/dev/null | grep -E "^ *(${GPU_BACKEND})" || true
+    "$LLAMA_SERVER" --list-devices 2>/dev/null | grep -E "^ *(${GPU_BACKEND})" || true
 fi
 
 # --- build command ---
-CMD=( /usr/local/bin/llama-server
+CMD=( "$LLAMA_SERVER"
     --model "$MODEL_PATH"
     --host "$HOST"
     --port "$PORT"
