@@ -53,7 +53,7 @@ usermod -aG video,render llama-cpp
 
 ```bash
 git clone git@github.com:Schwaggot/llama-cpp-server-manager.git /tmp/lcsm
-cp -r /tmp/lcsm/{profiles,serve.sh,llama-switch,README.md,LICENSE} /var/lib/llama-cpp/
+cp -r /tmp/lcsm/{profiles,templates,serve.sh,llama-switch,README.md,LICENSE} /var/lib/llama-cpp/
 install -d -o llama-cpp -g llama-cpp /var/lib/llama-cpp/models
 chown -R llama-cpp:llama-cpp /var/lib/llama-cpp
 chmod +x /var/lib/llama-cpp/serve.sh
@@ -144,6 +144,7 @@ systemctl status llama-cpp
 │   ├── active.conf      # Symlink to the current profile
 │   ├── qwen36-27b.conf
 │   └── …
+├── templates/           # Patched chat templates (--chat-template-file)
 ├── serve.sh             # Launcher script (reads active profile)
 ├── llama-switch         # Profile switcher CLI (symlinked into /usr/local/bin)
 └── README.md
