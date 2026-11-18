@@ -84,10 +84,11 @@ sudo -E wget -O /var/lib/llama-cpp/models/Qwen3.6-27B-MTP-UD-Q4_K_XL.gguf "https
 # 3-bit, so it fits with ~13 GiB to spare. UD-Q2_K_XL (108.7 GB, 78% top-1) is
 # the step down. Per-quant subdirectory upstream, flat filenames locally, same
 # as Flash-Next. Shard 1 is only 9 MB of header; the weight is in 2 and 3.
-# Needs a llama-server from Unsloth's glm5next/upstream branch - the
-# architecture is not in upstream master. Check:
-#   strings /usr/local/lib/libllama.so.0 /usr/local/bin/llama-server \
-#     2>/dev/null | grep -c glm5next
+# Needs a llama-server from upstream master that knows the architecture as
+# glm5-next; the Unsloth fork is no longer needed. A GGUF fetched before the
+# re-upload of 2026-10-05 still says glm5next and will not load - replace
+# shard 00001 only, shards 2-4 are unchanged. Check:
+#   strings /usr/local/lib/libllama.so.0 2>/dev/null | grep -cx glm5-next
 for i in 00001 00002 00003 00004; do
   sudo -E wget -c -P /var/lib/llama-cpp/models "https://huggingface.co/unsloth/GLM-5.3-Flash-GGUF/resolve/main/UD-IQ3_XXS/GLM-5.3-Flash-UD-IQ3_XXS-${i}-of-00004.gguf"
 done
